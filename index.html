@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Train Reminder PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        .status-box { border: 1px solid #ccc; padding: 15px; margin: 20px 0; border-radius: 10px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #log { font-size: 0.8em; color: #666; text-align: left; }
+    </style>
+</head>
+<body>
+    <h2>Pengingat Tiba di Stasiun</h2>
+    
+    <div class="status-box">
+        <p id="current-pos">Mencari lokasi...</p>
+        <p id="distance-info">Pilih tujuan dulu.</p>
+        <p id="eta">Estimasi: -</p>
+    </div>
+
+    <label>Pilih Stasiun Tujuan:</label><br>
+    <select id="station-select" style="margin: 10px; padding: 5px;">
+        <option value="-6.5948,106.7892">Stasiun Bogor</option>
+        <option value="-6.5318,106.8007">Stasiun Cilebut</option>
+        <option value="-6.4785,106.8222">Stasiun Bojong Gede</option>
+        <option value="-6.4067,106.7972">Stasiun Depok</option>
+    </select>
+    <br>
+    <button onclick="startTracking()">Mulai Pengingat</button>
+
+    <div id="log"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
