@@ -1,0 +1,24 @@
+:root { --primary: #00529b; --accent: #ff8200; --bg: #f4f7f9; }
+body { font-family: sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
+.app-container { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+
+/* Animasi Kereta */
+.track-container { position: relative; height: 60px; background: #eee; margin: 20px 0; border-radius: 10px; border-bottom: 3px solid #ccc; overflow: hidden; }
+.train { position: absolute; bottom: 5px; left: 5%; font-size: 25px; transition: left 0.5s ease; z-index: 5; }
+.rail { position: absolute; bottom: 10px; width: 100%; height: 2px; background: repeating-linear-gradient(90deg, #666 0, #666 10px, transparent 10px, transparent 20px); }
+
+/* Search & Results */
+.search-section { position: relative; margin-bottom: 15px; }
+input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+.results-dropdown { position: absolute; width: 100%; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10; max-height: 150px; overflow-y: auto; border-radius: 0 0 8px 8px; }
+.result-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; }
+
+/* Info & Log */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.card { background: #eef2f7; padding: 10px; border-radius: 8px; text-align: center; }
+.card span { display: block; font-size: 11px; color: #666; }
+.history-section { margin-top: 20px; text-align: left; border-top: 1px solid #eee; padding-top: 10px; }
+#travel-log { list-style: none; padding: 0; font-size: 12px; max-height: 100px; overflow-y: auto; }
+#travel-log li { margin-bottom: 5px; padding-left: 10px; border-left: 2px solid var(--primary); }
+button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+button:disabled { background: #ccc; }

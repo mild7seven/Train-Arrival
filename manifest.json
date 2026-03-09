@@ -1,15 +1,16 @@
 {
-  "name": "Train Arrival Reminder",
-  "short_name": "TrainAlert",
+  "name": "Kereta Alert Pro",
+  "short_name": "KeretaAlert",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#007bff",
+  "theme_color": "#00529b",
   "icons": [
     {
       "src": "https://via.placeholder.com/192",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

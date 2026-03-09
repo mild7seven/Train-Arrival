@@ -3,36 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Train Reminder PWA</title>
+    <title>Kereta Alert Pro</title>
+    <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    <style>
-        body { font-family: sans-serif; padding: 20px; text-align: center; }
-        .status-box { border: 1px solid #ccc; padding: 15px; margin: 20px 0; border-radius: 10px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #log { font-size: 0.8em; color: #666; text-align: left; }
-    </style>
 </head>
 <body>
-    <h2>Pengingat Tiba di Stasiun</h2>
-    
-    <div class="status-box">
-        <p id="current-pos">Mencari lokasi...</p>
-        <p id="distance-info">Pilih tujuan dulu.</p>
-        <p id="eta">Estimasi: -</p>
+    <div class="app-container">
+        <h2>Train Arrival Alert</h2>
+
+        <div class="track-container">
+            <span class="station-icon start-st">🏠</span>
+            <div class="rail"></div>
+            <div id="train-sprite" class="train">🚂</div>
+            <span class="station-icon end-st">📍</span>
+        </div>
+
+        <div class="search-section">
+            <input id="station-search" type="text" placeholder="Cari stasiun tujuan..." oninput="searchStation(this.value)">
+            <div id="search-results" class="results-dropdown"></div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="card"><span>Jarak Sisa</span><b id="distance-info">- km</b></div>
+            <div class="card"><span>Estimasi</span><b id="eta">- min</b></div>
+        </div>
+
+        <button id="btn-start" onclick="startTracking()" disabled>AKTIFKAN PENGINGAT</button>
+
+        <div class="history-section">
+            <h4>Log Perjalanan</h4>
+            <ul id="travel-log">
+                <li style="color:#999">Belum ada aktivitas...</li>
+            </ul>
+        </div>
     </div>
-
-    <label>Pilih Stasiun Tujuan:</label><br>
-    <select id="station-select" style="margin: 10px; padding: 5px;">
-        <option value="-6.5948,106.7892">Stasiun Bogor</option>
-        <option value="-6.5318,106.8007">Stasiun Cilebut</option>
-        <option value="-6.4785,106.8222">Stasiun Bojong Gede</option>
-        <option value="-6.4067,106.7972">Stasiun Depok</option>
-    </select>
-    <br>
-    <button onclick="startTracking()">Mulai Pengingat</button>
-
-    <div id="log"></div>
-
     <script src="app.js"></script>
 </body>
 </html>
