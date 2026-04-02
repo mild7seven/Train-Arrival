@@ -1,83 +1,182 @@
-let targetCoords = null;
-let watchID = null;
-let totalDistance = null;
-const alarmAudio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+// Global Variables
+let audioContext, analyser, dataArray, animationId, noiseChart;
+let sleepSessionData = [], dbData = [], labels = [];
+let noiseFloor = 45; 
+let historyBuffer = [];
 
-// 1. Pencarian Stasiun Gratis (Nominatim)
-async function searchStation(query) {
-    const resDiv = document.getElementById('search-results');
-    if (query.length < 3) { resDiv.innerHTML = ''; return; }
+// DOM Elements
+const volumeDisplay = document.getElementById('volume-display');
+const statusDisplay = document.getElementById('detection-status');
+const statusCont = document.getElementById('status-container');
+const mainCard = document.getElementById('main-card');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const exportDropdown = document.getElementById('export-dropdown');
 
+// Initialize Chart.js
+const ctx = document.getElementById('noiseChart').getContext('2d');
+noiseChart = new Chart(ctx, {
+    type: 'line',
+    data: { 
+        labels: labels, 
+        datasets: [{ 
+            data: dbData, 
+            borderColor: '#38bdf8', 
+            fill: true, 
+            backgroundColor: 'rgba(56,189,248,0.1)', 
+            pointRadius: 0, 
+            borderWidth: 2 
+        }] 
+    },
+    options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        scales: { y: { min: 20, max: 100, display: false }, x: { display: false } }, 
+        plugins: { legend: { display: false } } 
+    }
+});
+
+// START TRACKING
+async function startTracking() {
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}+station+indonesia&limit=5`);
-        const data = await response.json();
-        resDiv.innerHTML = data.map(item => `
-            <div class="result-item" onclick="selectStation(${item.lat}, ${item.lon}, '${item.display_name}')">
-                ${item.display_name}
-            </div>`).join('');
-    } catch (e) { console.error("Error fetching data"); }
-}
-
-function selectStation(lat, lon, name) {
-    targetCoords = { lat, lng: lon };
-    document.getElementById('station-search').value = name;
-    document.getElementById('search-results').innerHTML = '';
-    document.getElementById('btn-start').disabled = false;
-    addLog(`Tujuan disetel: ${name.split(',')[0]}`);
-}
-
-// 2. Logika Perhitungan & Tracking
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-}
-
-function startTracking() {
-    Notification.requestPermission();
-    addLog("Memulai pelacakan GPS...");
-
-    watchID = navigator.geolocation.watchPosition((pos) => {
-        const { latitude, longitude, speed } = pos.coords;
-        const dist = calculateDistance(latitude, longitude, targetCoords.lat, targetCoords.lng);
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioContext.createMediaStreamSource(stream);
         
-        if (totalDistance === null) totalDistance = dist;
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-        // Update UI
-        document.getElementById('distance-info').innerText = `${dist.toFixed(2)} km`;
+        // Screen Wake Lock
+        if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
+
+        // UI Updates
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        exportDropdown.style.display = 'none';
+        mainCard.classList.add('active-tracking');
         
-        // Estimasi waktu (Kecepatan default 50km/jam jika GPS diam)
-        const currentSpeed = (speed && speed > 0.5) ? speed * 3.6 : 50; 
-        const etaMin = Math.round((dist / currentSpeed) * 60);
-        document.getElementById('eta').innerText = `${etaMin} min`;
-
-        // Update Animasi Kereta
-        let progress = ((totalDistance - dist) / totalDistance) * 85;
-        document.getElementById('train-sprite').style.left = `${Math.max(5, Math.min(progress + 5, 90))}%`;
-
-        // Cek jika tiba (Radius 800 meter)
-        if (dist < 0.8) triggerArrival();
-
-    }, null, { enableHighAccuracy: true });
+        updateData();
+    } catch (err) {
+        console.error(err);
+        alert("Microphone access denied. Please use HTTPS or localhost.");
+    }
 }
 
-function triggerArrival() {
-    if ("vibrate" in navigator) navigator.vibrate([1000, 500, 1000, 500, 1000]);
-    alarmAudio.play();
-    new Notification("TIBA!", { body: "Anda sudah dekat stasiun tujuan!" });
-    addLog("ALARM: Anda telah sampai!");
-    navigator.geolocation.clearWatch(watchID);
-}
-
-function addLog(msg) {
-    const logList = document.getElementById('travel-log');
-    const now = new Date();
-    const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+// STOP TRACKING
+function stopTracking() {
+    cancelAnimationFrame(animationId);
+    if(audioContext) audioContext.close();
     
-    if (logList.innerText.includes("Belum ada")) logList.innerHTML = '';
-    const li = document.createElement('li');
-    li.innerHTML = `<strong>[${timeStr}]</strong> ${msg}`;
-    logList.prepend(li);
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    exportDropdown.style.display = 'block';
+    mainCard.classList.remove('active-tracking');
+    statusDisplay.innerText = "Tracking Stopped";
+    statusCont.className = "status-badge busy";
 }
+
+// AUDIO ANALYSIS LOOP
+function updateData() {
+    analyser.getByteFrequencyData(dataArray);
+    const nyquist = audioContext.sampleRate / 2;
+    const binSize = nyquist / dataArray.length;
+
+    let sSum = 0, tSum = 0, oSum = 0, sC = 0, tC = 0, oC = 0;
+
+    for (let i = 0; i < dataArray.length; i++) {
+        const freq = i * binSize;
+        if (freq >= 40 && freq < 600) { sSum += dataArray[i]; sC++; } // Snore
+        else if (freq >= 600 && freq <= 2000) { tSum += dataArray[i]; tC++; } // Talk
+        else { oSum += dataArray[i]; oC++; } // Noise
+    }
+
+    const avgS = sSum / sC, avgT = tSum / tC, avgO = oSum / oC;
+    const currentMax = Math.max(avgS, avgT);
+    const now = new Date().toLocaleTimeString();
+
+    // Adaptive Noise Floor Logic
+    historyBuffer.push(currentMax);
+    if (historyBuffer.length > 150) {
+        let minInHistory = Math.min(...historyBuffer);
+        let maxInHistory = Math.max(...historyBuffer);
+        if (maxInHistory - minInHistory < 6) {
+            noiseFloor = (noiseFloor * 0.8) + (maxInHistory * 0.2);
+            historyBuffer = [];
+        }
+        historyBuffer.shift();
+    }
+
+    // Detection Classification
+    statusCont.className = "status-badge active";
+    volumeDisplay.style.color = "#fff";
+    let status = "Listening...";
+
+    if (avgS > noiseFloor + 12 && avgS > avgT * 1.3) {
+        status = "💤 Snoring Detected";
+        statusCont.classList.add('snore');
+        volumeDisplay.style.color = "#facc15";
+        logData("Snoring", Math.round(avgS));
+    } else if (avgT > noiseFloor + 12 && avgT > avgO * 1.5) {
+        status = "🗣️ Sleep Talking";
+        statusCont.classList.add('talk');
+        volumeDisplay.style.color = "#ef4444";
+        logData("Talking", Math.round(avgT));
+    } else if (currentMax < noiseFloor + 5) {
+        status = "🍃 Silent";
+        statusCont.className = "status-badge hening";
+    }
+
+    volumeDisplay.innerHTML = `${Math.round(currentMax)}<span class="unit">dB</span>`;
+    statusDisplay.innerText = status;
+
+    // Chart Update
+    if (dbData.length > 40) { dbData.shift(); labels.shift(); }
+    dbData.push(currentMax); 
+    labels.push(now);
+    noiseChart.update('none');
+
+    animationId = requestAnimationFrame(updateData);
+}
+
+function logData(type, level) {
+    const time = new Date().toLocaleTimeString();
+    const last = sleepSessionData[sleepSessionData.length - 1];
+    if (!last || (Date.now() - last.ts > 3000)) {
+        sleepSessionData.push({ time, type, level, ts: Date.now() });
+    }
+}
+
+// EVENT LISTENERS
+startBtn.addEventListener('click', startTracking);
+stopBtn.addEventListener('click', stopTracking);
+
+// EXPORT FUNCTIONS
+document.getElementById('exportTxt').onclick = () => {
+    let summary = `SLEEPGUARD PRO - SESSION REPORT\nDate: ${new Date().toLocaleDateString()}\n\n`;
+    sleepSessionData.forEach(r => summary += `[${r.time}] ${r.type}: ${r.level} dB\n`);
+    const blob = new Blob([summary], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `SleepReport_${Date.now()}.txt`;
+    a.click();
+};
+
+document.getElementById('exportPdf').onclick = async () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFontSize(22); doc.text("SleepGuard Pro Report", 20, 20);
+    doc.setFontSize(10); doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 30);
+    
+    const chartImg = document.getElementById('noiseChart').toDataURL('image/png');
+    doc.addImage(chartImg, 'PNG', 20, 40, 170, 60);
+
+    const body = sleepSessionData.map(r => [r.time, r.type, `${r.level} dB`]);
+    doc.autoTable({ startY: 110, head: [['Time', 'Activity', 'Level']], body: body });
+    
+    doc.save(`SleepReport_${Date.now()}.pdf`);
+};
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');

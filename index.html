@@ -1,42 +1,67 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kereta Alert Pro</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SleepGuard Pro - AI Sleep Tracker</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#070b14">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
+    <div class="bg-blur circ-1"></div>
+    <div class="bg-blur circ-2"></div>
+
     <div class="app-container">
-        <h2>Train Arrival Alert</h2>
+        <header>
+            <div class="brand">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3C10.1593 3 8.36003 3.54545 6.82913 4.56682C5.29824 5.58818 4.10401 7.03961 3.39956 8.73832C2.69511 10.437 2.51075 12.31 2.86961 14.1136C3.22847 15.9172 4.11417 17.5678 5.41421 18.8678C6.71426 20.1678 8.36484 21.0535 10.1684 21.4124C11.972 21.7713 13.845 21.5869 15.5437 20.8824C17.2424 20.178 18.6938 18.9838 19.7152 17.4529C20.7366 15.922 21.282 14.1227 21.282 12.282C21.282 11.232 21.107 10.212 20.782 9.252C19.822 10.122 18.572 10.652 17.182 10.652C14.082 10.652 11.582 8.15197 11.582 5.05197C11.582 4.31197 11.732 3.61197 12 3Z" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <h1>SleepGuard <span class="pro-tag">PRO</span></h1>
+            </div>
+            <p class="subtitle">AI Noise Monitoring</p>
+        </header>
 
-        <div class="track-container">
-            <span class="station-icon start-st">🏠</span>
-            <div class="rail"></div>
-            <div id="train-sprite" class="train">🚂</div>
-            <span class="station-icon end-st">📍</span>
-        </div>
-
-        <div class="search-section">
-            <input id="station-search" type="text" placeholder="Cari stasiun tujuan..." oninput="searchStation(this.value)">
-            <div id="search-results" class="results-dropdown"></div>
+        <div class="main-card glass" id="main-card">
+            <div class="visualizer-area">
+                <div class="pulse-ring"></div>
+                <h2 id="volume-display">0<span class="unit">dB</span></h2>
+            </div>
+            <div class="status-badge busy" id="status-container">
+                <span class="dot"></span>
+                <span id="detection-status">Ready to Start</span>
+            </div>
         </div>
         
-        <div class="info-grid">
-            <div class="card"><span>Jarak Sisa</span><b id="distance-info">- km</b></div>
-            <div class="card"><span>Estimasi</span><b id="eta">- min</b></div>
+        <div class="chart-card glass">
+            <h3>Live Noise Activity</h3>
+            <div class="chart-wrapper">
+                <canvas id="noiseChart"></canvas>
+            </div>
         </div>
 
-        <button id="btn-start" onclick="startTracking()" disabled>AKTIFKAN PENGINGAT</button>
-
-        <div class="history-section">
-            <h4>Log Perjalanan</h4>
-            <ul id="travel-log">
-                <li style="color:#999">Belum ada aktivitas...</li>
-            </ul>
+        <div class="controls-card glass">
+            <div class="action-buttons">
+                <button id="startBtn" class="btn-start">Start Tracking</button>
+                <button id="stopBtn" class="btn-stop" disabled>Stop</button>
+                
+                <div class="dropdown-export btn-export-container" id="export-dropdown" style="display: none;">
+                    <button class="btn-export-main">Download Report ▼</button>
+                    <div class="dropdown-content">
+                        <button id="exportTxt" class="dropdown-item">📁 Export as .TXT</button>
+                        <button id="exportPdf" class="dropdown-item">📄 Export as .PDF</button>
+                    </div>
+                </div>
+            </div>
         </div>
+        
+        <p class="note">Self-calibrating to AC/Fan background noise.</p>
     </div>
+    <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
     <script src="app.js"></script>
 </body>
 </html>
